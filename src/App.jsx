@@ -1,6 +1,7 @@
 import React from "react";
 import { Route, Routes } from "react-router-dom";
 import Navbar from "./pages/Navbar";
+import Footer from "./pages/Footer";
 import MoviesDetails from "./pages/MoviesDetails";
 import BookingSystem from "./pages/MyBookings";
 import Login from "./pages/Login";
@@ -11,26 +12,33 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
   return (
-    <>
+    // 2. Added Flex classes to keep footer at bottom
+    <div className="flex flex-col min-h-screen"> 
       <Navbar />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/movies" element={<Movies />} />
-        <Route path="/movies/:id" element={<MoviesDetails />} />
+      
+      {/* 3. The main content area grows to fill space */}
+      <main className="flex-grow">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/movies" element={<Movies />} />
+          <Route path="/movies/:id" element={<MoviesDetails />} />
 
-        {/* 🔐 Protected Route */}
-        <Route
-          path="/booking"
-          element={
-            <ProtectedRoute>
-              <BookingSystem />
-            </ProtectedRoute>
-          }
-        />
+          {/* 🔐 Protected Route */}
+          <Route
+            path="/booking"
+            element={
+              <ProtectedRoute>
+                <BookingSystem />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-      </Routes>
-    </>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+        </Routes>
+      </main>
+
+      <Footer /> {/* 4. Placed outside Routes to show everywhere */}
+    </div>
   );
 }

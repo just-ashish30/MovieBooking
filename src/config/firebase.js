@@ -1,9 +1,10 @@
 
 import { initializeApp } from "firebase/app";
-
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyC55e4t3DIkMtWJ3djB2eKdtvjIVZRNWGM",
+  apiKey: import.meta.env.VITE_FIREBASE_API_Key,
   authDomain: "moviebooking-e05ee.firebaseapp.com",
   projectId: "moviebooking-e05ee",
   storageBucket: "moviebooking-e05ee.firebasestorage.app",
@@ -14,3 +15,5 @@ const firebaseConfig = {
 
 
 const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app)
+export const db = getFirestore(app)

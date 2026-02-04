@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom"; // 1. Added Navigation
 import axios from "axios";
 import { 
   ChevronLeft, ChevronRight, Star, Ticket, Info, 
-  Play, Flame, Award, Calendar, Languages 
+  Flame, Award, Calendar 
 } from "lucide-react";
 
 const Home = () => {
+  const navigate = useNavigate(); // 2. Initialize Navigate
   const [trendingMovies, setTrendingMovies] = useState([]); 
   const [row1, setRow1] = useState([]); 
   const [row2, setRow2] = useState([]); 
@@ -19,6 +21,17 @@ const Home = () => {
   const BASE_URL = "https://api.themoviedb.org/3";
   const IMG_PATH = "https://image.tmdb.org/t/p/w1280";
   const POSTER_PATH = "https://image.tmdb.org/t/p/w342";
+
+  // --- NAVIGATION HANDLERS ---
+  // This sends the user to the details page and passes the movie data
+  const handleViewDetails = (movie) => {
+    navigate(`/movie/${movie.id}`, { state: { movie } });
+  };
+
+  // This sends them to the details page but skips straight to the booking UI
+  const handleQuickBook = (movie) => {
+    navigate(`/movie/${movie.id}`, { state: { movie, autoScrollToBooking: true } });
+  };
 
   useEffect(() => {
     const getMovieData = async () => {
@@ -42,13 +55,11 @@ const Home = () => {
   // --- AUTO-PLAY LOGIC ---
   useEffect(() => {
     if (trendingMovies.length === 0) return;
-
     const autoPlay = setInterval(() => {
-      nextSlide();
-    }, 6000); // Change slide every 6 seconds
-
+      setCurrentSlide((prev) => (prev === trendingMovies.length - 1 ? 0 : prev + 1));
+    }, 6000);
     return () => clearInterval(autoPlay);
-  }, [trendingMovies, currentSlide]); // Reset timer on manual click
+  }, [trendingMovies]);
 
   const nextSlide = () => setCurrentSlide((prev) => (prev === trendingMovies.length - 1 ? 0 : prev + 1));
   const prevSlide = () => setCurrentSlide((prev) => (prev === 0 ? trendingMovies.length - 1 : prev - 1));
@@ -67,8 +78,12 @@ const Home = () => {
     </div>
   );
 
+  // --- UPDATED MOVIE CARD ---
   const MovieCard = ({ movie }) => (
-    <div className="min-w-[160px] md:min-w-[200px] bg-white rounded-2xl shadow-md snap-start overflow-hidden group border border-gray-100 transition-all hover:shadow-2xl hover:-translate-y-1">
+    <div 
+      onClick={() => handleViewDetails(movie)}
+      className="min-w-[160px] md:min-w-[200px] bg-white rounded-2xl shadow-md snap-start overflow-hidden group border border-gray-100 transition-all hover:shadow-2xl hover:-translate-y-2 cursor-pointer"
+    >
       <div className="relative aspect-[2/3] overflow-hidden">
         <img src={`${POSTER_PATH}${movie.poster_path}`} alt={movie.title} className="w-full h-full object-cover group-hover:scale-110 transition duration-500" />
         <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-md text-yellow-400 text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1">
@@ -77,7 +92,13 @@ const Home = () => {
       </div>
       <div className="p-3">
         <h3 className="font-bold text-xs text-gray-800 truncate mb-2">{movie.title}</h3>
-        <button className="w-full py-2 bg-gray-100 hover:bg-red-600 hover:text-white rounded-xl text-[10px] font-bold transition-colors uppercase tracking-wider">
+        <button 
+          onClick={(e) => {
+            e.stopPropagation(); // Prevents card click from firing
+            handleQuickBook(movie);
+          }}
+          className="w-full py-2 bg-gray-100 hover:bg-red-600 hover:text-white rounded-xl text-[10px] font-bold transition-colors uppercase tracking-wider"
+        >
           Quick Book
         </button>
       </div>
@@ -96,7 +117,6 @@ const Home = () => {
               index === currentSlide ? "opacity-100 z-10" : "opacity-0 z-0"
             }`}
           >
-            {/* Background Image with Cinematic Zoom Effect */}
             <div className={`absolute inset-0 transition-transform duration-[7000ms] ease-out ${
               index === currentSlide ? "scale-100" : "scale-125"
             }`}>
@@ -112,7 +132,7 @@ const Home = () => {
                    index === currentSlide ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
                  }`}>
                     <div className="flex flex-wrap items-center gap-3 mb-6">
-                      <span className="bg-red-600 text-[10px] font-black px-3 py-1 rounded-md uppercase tracking-widest shadow-lg shadow-red-600/30 animate-pulse">
+                      <span className="bg-red-600 text-[10px] font-black px-3 py-1 rounded-md uppercase tracking-widest shadow-lg shadow-red-600/30">
                         Trending Now
                       </span>
                       <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1 rounded-md text-xs font-bold text-yellow-400">
@@ -126,15 +146,21 @@ const Home = () => {
                     <h1 className="text-5xl md:text-8xl font-black mb-6 tracking-tighter drop-shadow-2xl leading-[1]">
                       {movie.title}
                     </h1>
-                    <p className="text-gray-300 text-sm md:text-base max-w-xl mb-8 line-clamp-3 leading-relaxed font-medium">
+                    <p className="text-gray-300 text-sm md:text-base max-w-xl mb-8 line-clamp-3 leading-relaxed font-medium italic">
                       {movie.overview}
                     </p>
 
                     <div className="flex flex-wrap gap-4">
-                       <button className="bg-red-600 px-8 py-4 rounded-2xl font-black flex items-center gap-2 hover:bg-red-700 transition transform hover:scale-105 shadow-xl shadow-red-600/20 text-sm uppercase">
+                       <button 
+                        onClick={() => handleQuickBook(movie)}
+                        className="bg-red-600 px-8 py-4 rounded-2xl font-black flex items-center gap-2 hover:bg-red-700 transition transform hover:scale-105 active:scale-95 shadow-xl shadow-red-600/20 text-sm uppercase"
+                       >
                          <Ticket size={20}/> Book Tickets
                        </button>
-                       <button className="bg-white/10 backdrop-blur-xl border border-white/20 px-8 py-4 rounded-2xl font-black flex items-center gap-2 hover:bg-white hover:text-black transition shadow-xl text-sm uppercase">
+                       <button 
+                        onClick={() => handleViewDetails(movie)}
+                        className="bg-white/10 backdrop-blur-xl border border-white/20 px-8 py-4 rounded-2xl font-black flex items-center gap-2 hover:bg-white hover:text-black transition transform hover:scale-105 active:scale-95 shadow-xl text-sm uppercase"
+                       >
                          <Info size={20}/> View Details
                        </button>
                     </div>
@@ -144,8 +170,8 @@ const Home = () => {
           </div>
         ))}
         
-        {/* Progress Bar (Visual Timer) */}
-        <div className="absolute bottom-0 left-0 h-1.5 bg-red-600 z-50 transition-all duration-linear"
+        {/* Progress Bar */}
+        <div className="absolute bottom-0 left-0 h-1.5 bg-red-600 z-50 transition-all duration-300"
              style={{ width: `${((currentSlide + 1) / trendingMovies.length) * 100}%` }} />
 
         {/* Navigation Arrows */}
@@ -157,9 +183,8 @@ const Home = () => {
         </button>
       </div>
 
-      {/* --- STACKED SLIDERS --- */}
+      {/* --- SLIDERS --- */}
       <div className="max-w-[85%] mx-auto -mt-16 relative z-20 space-y-16">
-        {/* ROW 1: TRENDING */}
         <section>
           <div className="flex justify-between items-end mb-6">
             <div>
@@ -178,7 +203,6 @@ const Home = () => {
           </div>
         </section>
 
-        {/* ROW 2: TOP RATED */}
         <section>
           <div className="flex justify-between items-end mb-6">
             <div>

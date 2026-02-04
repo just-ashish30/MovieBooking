@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 // 🚨 Ensure the folder name casing (Config vs config) matches your sidebar exactly
-import { auth, db } from "../Config/firebase"; 
+import { auth, db } from "../config/firebase"; 
 import { doc, setDoc } from "firebase/firestore";
 import { 
   GoogleAuthProvider, 

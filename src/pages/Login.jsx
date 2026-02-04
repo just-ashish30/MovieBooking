@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 // 🚨 FIX: Ensure this matches your folder name exactly (Config vs config)
-import { auth } from "../Config/firebase"; 
+import { auth } from "../config/firebase"; 
 import { 
   GoogleAuthProvider, 
   signInWithPopup, 

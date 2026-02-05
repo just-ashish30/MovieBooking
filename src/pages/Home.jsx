@@ -1,58 +1,44 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom"; // 1. Added Navigation
-import axios from "axios";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { useFirestore } from "../hooks/useFirestore"; // Using your existing hook
 import { 
   ChevronLeft, ChevronRight, Star, Ticket, Info, 
   Flame, Award, Calendar 
 } from "lucide-react";
 
 const Home = () => {
-  const navigate = useNavigate(); // 2. Initialize Navigate
-  const [trendingMovies, setTrendingMovies] = useState([]); 
-  const [row1, setRow1] = useState([]); 
-  const [row2, setRow2] = useState([]); 
+  const navigate = useNavigate();
+  const { data: movies, loading, error } = useFirestore("movies");
+  
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [loading, setLoading] = useState(true);
-
   const scrollRef1 = useRef(null);
   const scrollRef2 = useRef(null);
 
-  const API_KEY = "80d491707d8cf7b38aa19c7ccab0952f";
-  const BASE_URL = "https://api.themoviedb.org/3";
   const IMG_PATH = "https://image.tmdb.org/t/p/w1280";
   const POSTER_PATH = "https://image.tmdb.org/t/p/w342";
 
+  // --- DATA SORTING ---
+  // We use useMemo to sort the Firestore data into categories
+  const trendingMovies = useMemo(() => movies?.slice(0, 5) || [], [movies]);
+  
+  const popularRow = useMemo(() => 
+    movies ? [...movies].sort((a, b) => b.popularity - a.popularity) : [], 
+  [movies]);
+
+  const topRatedRow = useMemo(() => 
+    movies ? [...movies].sort((a, b) => b.vote_average - a.vote_average) : [], 
+  [movies]);
+
   // --- NAVIGATION HANDLERS ---
-  // This sends the user to the details page and passes the movie data
   const handleViewDetails = (movie) => {
-    navigate(`/movie/${movie.id}`, { state: { movie } });
+    navigate(`/movies/${movie.id}`, { state: { movie } });
   };
 
-  // This sends them to the details page but skips straight to the booking UI
-  const handleQuickBook = (movie) => {
-    navigate(`/movie/${movie.id}`, { state: { movie, autoScrollToBooking: true } });
+  const handleBookTickets = (movie) => {
+    navigate(`/movies/${movie.id}`, { state: { movie, scrollToBooking: true } });
   };
 
-  useEffect(() => {
-    const getMovieData = async () => {
-      try {
-        const [popRes, topRes] = await Promise.all([
-          axios.get(`${BASE_URL}/movie/popular`, { params: { api_key: API_KEY } }),
-          axios.get(`${BASE_URL}/movie/top_rated`, { params: { api_key: API_KEY } })
-        ]);
-        setTrendingMovies(popRes.data.results.slice(0, 5));
-        setRow1(popRes.data.results);
-        setRow2(topRes.data.results);
-      } catch (error) {
-        console.error("Fetch Error:", error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    getMovieData();
-  }, []);
-
-  // --- AUTO-PLAY LOGIC ---
+  // Auto-play for Hero Slider
   useEffect(() => {
     if (trendingMovies.length === 0) return;
     const autoPlay = setInterval(() => {
@@ -78,28 +64,34 @@ const Home = () => {
     </div>
   );
 
-  // --- UPDATED MOVIE CARD ---
+  if (error) return <div className="text-white text-center py-20 bg-gray-900">Error loading Firestore data...</div>;
+
+  // --- INTERNAL MOVIE CARD COMPONENT ---
   const MovieCard = ({ movie }) => (
     <div 
       onClick={() => handleViewDetails(movie)}
       className="min-w-[160px] md:min-w-[200px] bg-white rounded-2xl shadow-md snap-start overflow-hidden group border border-gray-100 transition-all hover:shadow-2xl hover:-translate-y-2 cursor-pointer"
     >
       <div className="relative aspect-[2/3] overflow-hidden">
-        <img src={`${POSTER_PATH}${movie.poster_path}`} alt={movie.title} className="w-full h-full object-cover group-hover:scale-110 transition duration-500" />
+        <img 
+          src={movie.poster_path ? `${POSTER_PATH}${movie.poster_path}` : '/placeholder.jpg'} 
+          alt={movie.title} 
+          className="w-full h-full object-cover group-hover:scale-110 transition duration-500" 
+        />
         <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-md text-yellow-400 text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1">
-          <Star size={10} fill="currentColor" /> {movie.vote_average.toFixed(1)}
+          <Star size={10} fill="currentColor" /> {movie.vote_average?.toFixed(1)}
         </div>
       </div>
       <div className="p-3">
         <h3 className="font-bold text-xs text-gray-800 truncate mb-2">{movie.title}</h3>
         <button 
           onClick={(e) => {
-            e.stopPropagation(); // Prevents card click from firing
-            handleQuickBook(movie);
+            e.stopPropagation();
+            handleViewDetails(movie);
           }}
-          className="w-full py-2 bg-gray-100 hover:bg-red-600 hover:text-white rounded-xl text-[10px] font-bold transition-colors uppercase tracking-wider"
+          className="w-full py-2 bg-gray-100 hover:bg-blue-600 hover:text-white rounded-xl text-[10px] font-black transition-all uppercase tracking-wider flex items-center justify-center gap-2"
         >
-          Quick Book
+          <Info size={14} /> View Details
         </button>
       </div>
     </div>
@@ -133,14 +125,11 @@ const Home = () => {
                  }`}>
                     <div className="flex flex-wrap items-center gap-3 mb-6">
                       <span className="bg-red-600 text-[10px] font-black px-3 py-1 rounded-md uppercase tracking-widest shadow-lg shadow-red-600/30">
-                        Trending Now
+                        Top Pick
                       </span>
                       <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1 rounded-md text-xs font-bold text-yellow-400">
-                        <Star size={14} fill="currentColor" /> {movie.vote_average.toFixed(1)}
+                        <Star size={14} fill="currentColor" /> {movie.vote_average?.toFixed(1)}
                       </div>
-                      <span className="text-xs font-bold text-gray-300 flex items-center gap-1.5 capitalize">
-                        <Calendar size={14} /> {movie.release_date?.split("-")[0]}
-                      </span>
                     </div>
 
                     <h1 className="text-5xl md:text-8xl font-black mb-6 tracking-tighter drop-shadow-2xl leading-[1]">
@@ -152,7 +141,7 @@ const Home = () => {
 
                     <div className="flex flex-wrap gap-4">
                        <button 
-                        onClick={() => handleQuickBook(movie)}
+                        onClick={() => handleBookTickets(movie)}
                         className="bg-red-600 px-8 py-4 rounded-2xl font-black flex items-center gap-2 hover:bg-red-700 transition transform hover:scale-105 active:scale-95 shadow-xl shadow-red-600/20 text-sm uppercase"
                        >
                          <Ticket size={20}/> Book Tickets
@@ -174,7 +163,6 @@ const Home = () => {
         <div className="absolute bottom-0 left-0 h-1.5 bg-red-600 z-50 transition-all duration-300"
              style={{ width: `${((currentSlide + 1) / trendingMovies.length) * 100}%` }} />
 
-        {/* Navigation Arrows */}
         <button onClick={prevSlide} className="absolute left-6 top-1/2 -translate-y-1/2 z-40 p-4 bg-black/20 hover:bg-red-600 rounded-full text-white transition-all opacity-0 group-hover:opacity-100 backdrop-blur-md border border-white/10">
           <ChevronLeft size={28}/>
         </button>
@@ -183,13 +171,14 @@ const Home = () => {
         </button>
       </div>
 
-      {/* --- SLIDERS --- */}
+      {/* --- CAROUSELS --- */}
       <div className="max-w-[85%] mx-auto -mt-16 relative z-20 space-y-16">
+        {/* Row 1: Most Popular */}
         <section>
           <div className="flex justify-between items-end mb-6">
             <div>
               <h2 className="flex items-center gap-2 text-2xl font-black text-gray-900 uppercase tracking-tight">
-                <Flame className="text-red-600" fill="currentColor" /> Trending Now
+                <Flame className="text-red-600" fill="currentColor" /> Popular Hits
               </h2>
               <div className="h-1 w-12 bg-red-600 mt-1 rounded-full"></div>
             </div>
@@ -199,10 +188,11 @@ const Home = () => {
             </div>
           </div>
           <div ref={scrollRef1} className="flex space-x-6 overflow-x-auto scrollbar-hide snap-x pb-4" style={{ scrollbarWidth: 'none' }}>
-            {row1.map(movie => <MovieCard key={movie.id} movie={movie} />)}
+            {popularRow.map(movie => <MovieCard key={movie.id} movie={movie} />)}
           </div>
         </section>
 
+        {/* Row 2: Top Rated */}
         <section>
           <div className="flex justify-between items-end mb-6">
             <div>
@@ -217,7 +207,7 @@ const Home = () => {
             </div>
           </div>
           <div ref={scrollRef2} className="flex space-x-6 overflow-x-auto scrollbar-hide snap-x pb-4" style={{ scrollbarWidth: 'none' }}>
-            {row2.map(movie => <MovieCard key={movie.id} movie={movie} />)}
+            {topRatedRow.map(movie => <MovieCard key={movie.id} movie={movie} />)}
           </div>
         </section>
       </div>
